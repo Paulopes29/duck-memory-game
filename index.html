@@ -29,6 +29,7 @@
             margin-bottom: 20px;
         }
 
+
         .game-board {
             display: grid;
             grid-template-columns: repeat(4, var(--card-size));
@@ -126,6 +127,11 @@
             color: white;
         }
 
+        .game-actions {
+            display: flex;
+            gap: 10px;
+        }
+
         @media (max-width: 600px) {
             body {
                 padding-left: 16px;
@@ -136,6 +142,7 @@
             h1 {
                 font-size: 1.5em;
                 text-align: center;
+                margin-bottom: 15px;
             }
 
             .game-board {
@@ -152,8 +159,10 @@
             }
 
             .game-info {
-                font-size: 1em;
+                font-size: 1.1em;
                 flex-direction: column;
+                align-items: center;
+                margin-top: 15px;
                 gap: 8px;
             }
 
@@ -171,6 +180,7 @@
 
             button {
                 padding: 12px 18px;
+                margin-top: 15px;
             }
         }
     </style>
@@ -198,7 +208,7 @@
             <span style="margin: 0 20px;">Au tour de: <span id="turn-indicator"></span></span>
             <span style="color: #3498db;">Équipe Bleue: <span id="score-blue">0</span></span>
         </div>
-        <div style="display: flex; gap: 10px;">
+        <div class="game-actions">
             <button id="replay-button">Relancer la partie</button>
             <button id="restart-button">Retour au menu</button>
         </div>
