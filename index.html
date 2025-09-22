@@ -125,6 +125,45 @@
             background-color: var(--card-color);
             color: white;
         }
+
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 1.5em;
+                text-align: center;
+            }
+
+            .game-board {
+                width: 95vw;
+                gap: 8px;
+            }
+
+            /* La taille des cartes est maintenant gérée par la grille */
+            :root {
+                --card-size: auto;
+            }
+
+            .game-info {
+                font-size: 1em;
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            /* On supprime les marges horizontales pour un affichage vertical */
+            #solo-info span,
+            #1v1-info span {
+                margin: 0 !important;
+            }
+
+            #game-menu {
+                padding: 20px;
+                width: 90vw;
+                box-sizing: border-box;
+            }
+
+            button {
+                padding: 12px 18px;
+            }
+        }
     </style>
 </head>
 
