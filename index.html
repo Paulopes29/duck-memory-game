@@ -127,13 +127,19 @@
         }
 
         @media (max-width: 600px) {
+            body {
+                padding-left: 8px;
+                padding-right: 8px;
+                box-sizing: border-box;
+            }
+
             h1 {
                 font-size: 1.5em;
                 text-align: center;
             }
 
             .game-board {
-                width: 95vw;
+                width: 100%;
                 grid-template-columns: repeat(4, 1fr);
                 gap: 8px;
             }
