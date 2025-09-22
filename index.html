@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jeu de Mémoire Canard</title>
+    <style>
+        :root {
+            --card-size: 120px;
+            --background-color: #2c3e50;
+            --card-color: #3498db;
+            --font-color: #ecf0f1;
+        }
+
+        body {
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            min-height: 100vh;
+            margin: 0;
+            background-color: var(--background-color);
+            color: var(--font-color);
+        }
+
+        h1 {
+            margin-bottom: 20px;
+        }
+
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(4, var(--card-size));
+            gap: 10px;
+            perspective: 1000px;
+            /* Pour l'effet 3D */
+        }
+
+        .card {
+            width: var(--card-size);
+            height: var(--card-size);
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.6s;
+            cursor: pointer;
+        }
+
+        .card.flipped {
+            transform: rotateY(180deg);
+        }
+
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            /* Cache le dos de la carte quand elle est retournée */
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .card-front {
+            background-color: white;
+            transform: rotateY(180deg);
+        }
+
+        .card-front img {
+            width: 90%;
+            height: 90%;
+            object-fit: contain;
+        }
+
+        .card-back {
+            background-color: var(--card-color);
+            font-size: 4rem;
+            color: white;
+            /* Remplacé par une image. Mettez votre image 'card-back.png' dans le même dossier. */
+            background-image: url('images/card-back.png');
+            background-size: cover;
+            background-position: center;
+        }
+
+        #game-menu {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: rgba(0, 0, 0, 0.2);
+            padding: 40px;
+            border-radius: 10px;
+        }
+
+        #game-menu button {
+            margin: 10px;
+            padding: 15px 30px;
+            font-size: 1.2em;
+        }
+
+        #turn-indicator.red {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+
+        #turn-indicator.blue {
+            color: #3498db;
+            font-weight: bold;
+        }
+
+        .game-info {
+            margin-top: 20px;
+            font-size: 1.5em;
+        }
+
+        button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 1em;
+            font-family: inherit;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            background-color: var(--card-color);
+            color: white;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Jeu de Mémoire Canard</h1>
+
+    <div id="game-menu">
+        <h2>Choisissez un mode de jeu</h2>
+        <button id="solo-mode-btn">Jouer en Solo</button>
+        <button id="1v1-mode-btn">Jouer en 1vs1</button>
+    </div>
+
+    <div id="game-container" style="display: none;">
+        <div class="game-board" id="game-board"></div>
+        <div id="solo-info" class="game-info" style="display: none; justify-content: center;">
+            <span style="margin-right: 15px;">Coups: <span id="moves-count">0</span></span>
+            <span style="margin-right: 15px;">Temps: <span id="timer">0</span>s</span>
+            <span>Meilleur: <span id="best-score">--</span></span>
+        </div>
+        <div id="1v1-info" class="game-info" style="display: none; justify-content: center;">
+            <span style="color: #e74c3c;">Équipe Rouge: <span id="score-red">0</span></span>
+            <span style="margin: 0 20px;">Au tour de: <span id="turn-indicator"></span></span>
+            <span style="color: #3498db;">Équipe Bleue: <span id="score-blue">0</span></span>
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <button id="replay-button">Relancer la partie</button>
+            <button id="restart-button">Retour au menu</button>
+        </div>
+    </div>
+
+    <script>
+        const gameBoard = document.getElementById('game-board');
+        const restartButton = document.getElementById('restart-button');
+
+        // Menu elements
+        const gameMenu = document.getElementById('game-menu');
+        const gameContainer = document.getElementById('game-container');
+        const soloModeBtn = document.getElementById('solo-mode-btn');
+        const pvpModeBtn = document.getElementById('1v1-mode-btn');
+        const replayButton = document.getElementById('replay-button');
+
+        // Game Info elements
+        const soloInfo = document.getElementById('solo-info');
+        const pvpInfo = document.getElementById('1v1-info');
+        const movesCountSpan = document.getElementById('moves-count');
+        const timerSpan = document.getElementById('timer');
+        const bestScoreSpan = document.getElementById('best-score');
+        const scoreRedSpan = document.getElementById('score-red');
+        const scoreBlueSpan = document.getElementById('score-blue');
+        const turnIndicatorSpan = document.getElementById('turn-indicator');
+
+        // --- CONFIGURATION ---
+        // Mettez ici les noms de vos fichiers image (sans l'extension .png)
+        const cardImages = ['duck1', 'duck2', 'duck3', 'duck4', 'duck5', 'duck6'];
+
+        let gameMode = ''; // 'solo' or '1v1'
+        let firstCard = null;
+        let secondCard = null;
+        let lockBoard = false;
+        let moves = 0;
+        let matchedPairs = 0;
+        let seconds = 0;
+        let timerInterval = null;
+        let currentPlayer = 'red';
+        let scores = { red: 0, blue: 0 };
+
+        function startGame(mode) {
+            gameMode = mode;
+            gameMenu.style.display = 'none';
+            gameContainer.style.display = 'flex';
+            gameContainer.style.flexDirection = 'column';
+            gameContainer.style.alignItems = 'center';
+
+            if (gameMode === 'solo') {
+                soloInfo.style.display = 'flex';
+                pvpInfo.style.display = 'none';
+            } else { // '1v1'
+                soloInfo.style.display = 'none';
+                pvpInfo.style.display = 'flex';
+            }
+            createBoard();
+        }
+
+        function createBoard() {
+            // Réinitialiser
+            gameBoard.innerHTML = '';
+            matchedPairs = 0;
+            lockBoard = false;
+
+            if (gameMode === 'solo') {
+                moves = 0;
+                seconds = 0;
+                movesCountSpan.textContent = moves;
+                timerSpan.textContent = seconds;
+                loadBestScore();
+                if (timerInterval) clearInterval(timerInterval);
+                timerInterval = setInterval(() => {
+                    seconds++;
+                    timerSpan.textContent = seconds;
+                }, 1000);
+            } else { // 1v1
+                scores = { red: 0, blue: 0 };
+                currentPlayer = 'red';
+                updateScoresUI();
+                updateTurnUI();
+            }
+
+            const gameCards = [...cardImages, ...cardImages]; // Dupliquer pour avoir des paires
+            gameCards.sort(() => 0.5 - Math.random()); // Mélanger les cartes
+            gameCards.forEach(imageName => {
+                const card = document.createElement('div');
+                card.classList.add('card');
+                card.dataset.name = imageName;
+
+                card.innerHTML = `
+                    <div class="card-face card-front">
+                         <img src="images/${imageName}.png" alt="Canard">
+                    </div>
+                    <div class="card-face card-back"></div>
+                `;
+
+                card.addEventListener('click', flipCard);
+                gameBoard.appendChild(card);
+            });
+        }
+
+        function flipCard() {
+            if (lockBoard) return;
+            if (this === firstCard) return; // Empêche de cliquer deux fois sur la même carte
+
+            this.classList.add('flipped');
+
+            if (!firstCard) {
+                firstCard = this;
+                return;
+            }
+
+            secondCard = this;
+            if (gameMode === 'solo') {
+                moves++;
+                movesCountSpan.textContent = moves;
+            }
+            checkForMatch();
+        }
+
+        function checkForMatch() {
+            const isMatch = firstCard.dataset.name === secondCard.dataset.name;
+            isMatch ? disableCards() : unflipCards();
+        }
+
+        function disableCards() {
+            firstCard.removeEventListener('click', flipCard);
+            secondCard.removeEventListener('click', flipCard);
+            matchedPairs++;
+
+            if (gameMode === '1v1') {
+                // Le joueur a trouvé une paire, il marque un point et rejoue
+                scores[currentPlayer]++;
+                updateScoresUI();
+            }
+
+            resetBoard();
+
+            if (matchedPairs === cardImages.length) {
+                if (gameMode === 'solo') {
+                    clearInterval(timerInterval);
+                    setTimeout(() => {
+                        saveBestScore();
+                    }, 500);
+                } else { // 1v1
+                    setTimeout(() => {
+                        let winnerMessage = '';
+                        if (scores.red > scores.blue) {
+                            winnerMessage = 'L\'équipe Rouge gagne !';
+                        } else if (scores.blue > scores.red) {
+                            winnerMessage = 'L\'équipe Bleue gagne !';
+                        } else {
+                            winnerMessage = 'Égalité !';
+                        }
+                        alert(`Partie terminée ! ${winnerMessage}`);
+                    }, 500);
+                }
+            }
+        }
+
+        function unflipCards() {
+            lockBoard = true;
+            setTimeout(() => {
+                if (gameMode === '1v1') {
+                    // Le joueur n'a pas trouvé de paire, on change de tour
+                    switchPlayer();
+                }
+                firstCard.classList.remove('flipped');
+                secondCard.classList.remove('flipped');
+                resetBoard();
+            }, 1200);
+        }
+
+        function resetBoard() {
+            [firstCard, secondCard, lockBoard] = [null, null, false];
+        }
+
+        function switchPlayer() {
+            currentPlayer = (currentPlayer === 'red') ? 'blue' : 'red';
+            updateTurnUI();
+        }
+
+        function updateScoresUI() {
+            scoreRedSpan.textContent = scores.red;
+            scoreBlueSpan.textContent = scores.blue;
+        }
+
+        function updateTurnUI() {
+            turnIndicatorSpan.textContent = (currentPlayer === 'red') ? 'Rouge' : 'Bleu';
+            turnIndicatorSpan.className = ''; // reset classes
+            turnIndicatorSpan.classList.add(currentPlayer);
+        }
+
+        function saveBestScore() {
+            const currentScore = { moves: moves, seconds: seconds };
+            const bestScore = JSON.parse(localStorage.getItem('bestScore'));
+
+            let isNewBestScore = false;
+            // Moins de coups c'est mieux. Si égalité, moins de temps c'est mieux.
+            if (!bestScore || (currentScore.moves < bestScore.moves) || (currentScore.moves === bestScore.moves && currentScore.seconds < bestScore.seconds)) {
+                isNewBestScore = true;
+            }
+
+            if (isNewBestScore) {
+                alert(`Nouveau meilleur score ! Vous avez gagné en ${moves} coups et ${seconds} secondes !`);
+                localStorage.setItem('bestScore', JSON.stringify(currentScore));
+                loadBestScore();
+            } else {
+                alert(`Bravo ! Vous avez gagné en ${moves} coups et ${seconds} secondes !`);
+            }
+        }
+
+        function loadBestScore() {
+            const bestScore = JSON.parse(localStorage.getItem('bestScore'));
+            if (bestScore) {
+                bestScoreSpan.textContent = `${bestScore.moves} coups / ${bestScore.seconds}s`;
+            } else {
+                bestScoreSpan.textContent = '--';
+            }
+        }
+
+        function showMenu() {
+            if (timerInterval) clearInterval(timerInterval);
+            gameMenu.style.display = 'flex';
+            gameContainer.style.display = 'none';
+        }
+
+        // Event Listeners
+        soloModeBtn.addEventListener('click', () => startGame('solo'));
+        pvpModeBtn.addEventListener('click', () => startGame('1v1'));
+        replayButton.addEventListener('click', createBoard);
+        restartButton.addEventListener('click', showMenu);
+
+        // Démarrer sur le menu
+        showMenu();
+    </script>
+</body>
+
+</html>
