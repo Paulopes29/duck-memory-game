@@ -134,12 +134,15 @@
 
             .game-board {
                 width: 95vw;
+                grid-template-columns: repeat(4, 1fr);
                 gap: 8px;
             }
 
-            /* La taille des cartes est maintenant gérée par la grille */
-            :root {
-                --card-size: auto;
+            .card {
+                /* On s'assure que les cartes restent carrées en forçant le ratio */
+                aspect-ratio: 1 / 1;
+                height: auto;
+                /* La hauteur est maintenant gérée par l'aspect-ratio */
             }
 
             .game-info {
